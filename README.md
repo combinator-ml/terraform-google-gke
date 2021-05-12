@@ -9,7 +9,6 @@ Please note that you need a GCP account and project in order to use this module.
 ```terraform
 module "terraform-google-kubernetes" {
   source  = "combinator-ml/kubernetes/google"
-  version = "0.0.1"
   gcp_project_id = "your-gpc-project-id"
 }
 ```
