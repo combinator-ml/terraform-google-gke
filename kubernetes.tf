@@ -54,8 +54,8 @@ module "gke" {
   regional                   = var.regional
   region                     = var.gcp_region
   zones                      = var.gcp_zones
-  network                    = var.vpc_network_name
-  subnetwork                 = var.vpc_subnetwork_name
+  network                    = module.vpc.network_name
+  subnetwork                 = module.vpc.subnets_names[0]
   ip_range_pods              = var.cluster_secondary_range_name
   ip_range_services          = var.services_secondary_range_name
   http_load_balancing        = false
@@ -66,6 +66,9 @@ module "gke" {
   issue_client_certificate   = var.client_certificate_enabled
   enable_private_nodes       = true
   enable_private_endpoint    = false
+  depends_on = [
+    module.vpc
+  ]
 }
 
 module "router" {
@@ -76,6 +79,9 @@ module "router" {
   project = var.gcp_project_id
   region  = var.gcp_region
   network = module.vpc.network_self_link
+  depends_on = [
+    module.vpc
+  ]
 }
 
 module "nat" {
@@ -84,4 +90,7 @@ module "nat" {
   project_id = var.gcp_project_id
   region     = var.gcp_region
   router     = module.router.router.name
+  depends_on = [
+    module.router
+  ]
 }
