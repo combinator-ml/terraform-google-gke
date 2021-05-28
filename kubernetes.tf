@@ -35,7 +35,6 @@ module "vpc" {
     ]
   }
 
-
   routes = [
     {
       name              = "egress-internet"
@@ -44,30 +43,6 @@ module "vpc" {
       tags              = "egress-inet"
       next_hop_internet = "true"
     }
-  ]
-}
-
-module "gke" {
-  source                     = "terraform-google-modules/kubernetes-engine/google//modules/private-cluster"
-  project_id                 = var.gcp_project_id
-  name                       = var.cluster_name
-  regional                   = var.regional
-  region                     = var.gcp_region
-  zones                      = var.gcp_zones
-  network                    = module.vpc.network_name
-  subnetwork                 = module.vpc.subnets_names[0]
-  ip_range_pods              = var.cluster_secondary_range_name
-  ip_range_services          = var.services_secondary_range_name
-  http_load_balancing        = false
-  horizontal_pod_autoscaling = false
-  network_policy             = false
-  remove_default_node_pool   = true
-  node_pools                 = var.node_pools
-  issue_client_certificate   = var.client_certificate_enabled
-  enable_private_nodes       = true
-  enable_private_endpoint    = false
-  depends_on = [
-    module.vpc
   ]
 }
 
@@ -93,4 +68,37 @@ module "nat" {
   depends_on = [
     module.router
   ]
+}
+
+resource "time_sleep" "wait_for_network_propagation" {
+  create_duration = "10s"
+  depends_on      = [module.vpc]
+}
+
+module "gke" {
+  source                     = "terraform-google-modules/kubernetes-engine/google//modules/private-cluster"
+  project_id                 = var.gcp_project_id
+  name                       = var.cluster_name
+  regional                   = var.regional
+  region                     = var.gcp_region
+  zones                      = var.gcp_zones
+  network                    = module.vpc.network_name
+  subnetwork                 = module.vpc.subnets_names[0]
+  ip_range_pods              = var.cluster_secondary_range_name
+  ip_range_services          = var.services_secondary_range_name
+  http_load_balancing        = false
+  horizontal_pod_autoscaling = false
+  network_policy             = false
+  remove_default_node_pool   = true
+  node_pools                 = var.node_pools
+  issue_client_certificate   = var.client_certificate_enabled
+  enable_private_nodes       = true
+  enable_private_endpoint    = false
+  depends_on = [
+    time_sleep.wait_for_network_propagation
+  ]
+  node_pools_oauth_scopes = {
+    all               = ["storage-rw"] # GCS access
+    default-node-pool = ["https://www.googleapis.com/auth/cloud-platform"]
+  }
 }
